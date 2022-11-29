@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.15.1/dist/phaser-arcade-physics.min.js"></script>
+    <style media='screen' type='text/css'>
+        @font-face {
+            font-family: SpaceAge;
+            src: url('./assets/fonts/spaceage.ttf');
+        }
+    </style>
+</head>
+<body>
+    <script>
+    var config = {
+        type: Phaser.AUTO,
+        width: 800,
+        height: 600,
+        physics: {
+            default: 'arcade',
+            arcade: {
+                gravity: { y: 200 }
+            }
+        },
+        scene: {
+            preload: preload,
+            create: create,
+            update: updateScene
+        }
+    };
+
+    var game = new Phaser.Game(config);
+
+    // Background variables
+    var backgroundY = 300;
+    var background;
+    var backgroundTop;
+
+    // Spaceship variables
+    var speed = 1;
+    var nave;
+    var playing = false;
+    var naveEscalaInicial = 1;
+    var naveEscalaFinal = 0.2;
+    var naveVelocidadEscalado = 0.01;
+    var naveEscala = naveEscalaInicial;
+
+    var emitter;
+
+    // Teclado
+    var cursors;
+
+    var speedtank;
+    var speedtankY = -50;
+
+    function preload ()
+    {
+        this.load.setBaseURL('http://localhost/juego/');
+
+        // Loading images
+        this.load.image('sky', 'assets/img/space3.png');
+        this.load.image('red', 'assets/img/red.png');
+        this.load.image('pelota','assets/img/pelota.png');
+        this.load.image('nave','assets/img/spaceship.png');
+        this.load.image('speedtank','assets/img/speedtank.png');
+
+        // Loading sound
+        this.load.audio('music', 'assets/music/backgroundmusic.mp3');
+    }
+
+    function create ()
+    {
+        cursors = this.input.keyboard.createCursorKeys();
+
+        if (!playing && !this.load.isLoading()) {
+            playing = true
+            var music = this.sound.add('music') // this works
+            music.loop = true;
+            // music.play();
+        }
+
+        backgroundTop = this.add.image(400, backgroundY - 600, 'sky');
+        background = this.add.image(400, backgroundY, 'sky');
+
+        nave = this.physics.add.image(400,500,'nave');
+        nave.setScale(naveEscala);
+        nave.setCollideWorldBounds(true);
+
+        this.add.text(10, 10, 'SCORE:', { fontFamily: 'SpaceAge' });
+
+       
+        var particles = this.add.particles('red');
+        emitter = particles.createEmitter({
+            speed: 10,
+            accelerationY: 20000,
+            lifespan: 60,
+            scale: { start: 1, end: 0 },
+            blendMode: 'ADD'
+        });
+        emitter.startFollow(nave);
+        emitter.followOffset.set(0, 50);
+        emitter.setScale(0.5);
+        emitter.visible = false;
+
+        speedtank = this.add.image(400, 60, 'speedtank');
+        speedtank.setScale(0.1);
+    }
+
+    function updateScene ()
+    {
+        doScrolling();
+        doSpaceShipScaleEffect();
+
+        if (cursors.left.isDown)
+        {
+            nave.setVelocityX(-300);
+        }
+        else if (cursors.right.isDown)
+        {
+            nave.setVelocityX(300);
+        }
+
+        if (cursors.up.isDown)
+        {
+            nave.setVelocityY(-300);
+        }
+        else if (cursors.down.isDown)
+        {
+            nave.setVelocityY(300);
+        }
+
+        speedtankY = speedtankY + speed;
+        speedtank.rotation += 0.01;
+        speedtank.setPosition(400, speedtankY);
+        if (speedtankY > 620) {
+            speedtankY = -50;
+        }
+    }
+
+    // Hace el efecto de la nave llegando
+    function doSpaceShipScaleEffect() {
+        naveEscala = naveEscala - naveVelocidadEscalado;
+        if (naveEscala < naveEscalaFinal) {
+            naveEscala = naveEscalaFinal;
+            emitter.visible = true;
+            speed = 3;
+        }
+        nave.setScale(naveEscala);
+
+        nave.setVelocity(0);
+    }
+
+    // Scrolls the background
+    function doScrolling() 
+    {
+        backgroundY = backgroundY + speed;
+
+        if (backgroundY > 900) {
+            backgroundY = 300;
+        }
+
+        backgroundTop.setPosition(400, backgroundY - 600);
+        background.setPosition(400, backgroundY);
+    }
+    </script>
+
+</body>
+</html>
