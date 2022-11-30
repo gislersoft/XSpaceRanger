@@ -11,6 +11,63 @@
 </head>
 <body>
     <script>
+    class Bullet extends Phaser.Physics.Arcade.Sprite
+    {
+        constructor (scene, x, y)
+        {
+            super(scene, x, y, 'laser');
+        }
+
+        fire (x, y)
+        {
+            this.body.reset(x, y);
+
+            this.setActive(true);
+            this.setVisible(true);
+
+            this.setVelocityY(-3000);
+            this.setScale(0.2);
+        }
+
+        preUpdate (time, delta)
+        {
+            super.preUpdate(time, delta);
+
+            if (this.y <= -32)
+            {
+                this.setActive(false);
+                this.setVisible(false);
+            }
+        }
+    }
+
+    class Bullets extends Phaser.Physics.Arcade.Group
+    {
+        constructor (scene)
+        {
+            super(scene.physics.world, scene);
+
+            this.createMultiple({
+                frameQuantity: 1,
+                key: 'bullet',
+                active: false,
+                visible: false,
+                classType: Bullet
+            });
+        }
+
+        fireBullet (x, y)
+        {
+            let bullet = this.getFirstDead(false);
+
+            if (bullet)
+            {
+                bullet.fire(x, y);
+            }
+        }
+    }
+
+
     var config = {
         type: Phaser.AUTO,
         width: 800,
@@ -63,6 +120,8 @@
     var timerCreateTankInitiated = false;
     var self;
 
+    var bullets;
+
     function preload ()
     {
         this.load.setBaseURL('http://localhost/juego/');
@@ -74,6 +133,7 @@
         this.load.image('pelota','assets/img/pelota.png');
         this.load.image('nave','assets/img/spaceship.png');
         this.load.image('speedtank','assets/img/speedtank.png');
+        this.load.image('laser', 'assets/img/laser.png');
 
         // Loading sound
         this.load.audio('music', 'assets/music/backgroundmusic.mp3');
@@ -107,6 +167,8 @@
 
         createTank();
 
+        this.bullets = new Bullets(this);
+
     }
 
     function updateScene ()
@@ -133,6 +195,10 @@
         else if (cursors.down.isDown)
         {
             nave.setVelocityY(300);
+        }
+
+        if (cursors.space.isDown) {
+            this.bullets.fireBullet(nave.x, nave.y - 60);
         }
 
         speedtankY = speedtankY + speed;
