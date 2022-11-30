@@ -59,6 +59,8 @@
     var particlesTank;
     var timerTankParticles;
     var timerStopHyperSpeed;
+    var timerCreateTank;
+    var timerCreateTankInitiated = false;
     var self;
 
     function preload ()
@@ -103,14 +105,7 @@
 
         engineFire = createParticlesBooster();
 
-        speedtank = this.physics.add.image(400, 60, 'speedtank');
-        speedtank.setScale(0.1);
-
-        particlesTank = createTankParticleSystem(nave, this.add.particles('violet'));
-
-        this.physics.add.collider(nave, speedtank, function (nave, speedtank) {
-            tankCollision();
-        });
+        createTank();
 
     }
 
@@ -142,9 +137,10 @@
 
         speedtankY = speedtankY + speed;
         speedtank.rotation += 0.01;
-        speedtank.setPosition(400, speedtankY);
+        speedtank.setPosition(speedtank.x, speedtankY);
         if (speedtankY > 620) {
-            speedtankY = -50;
+            speedtank.destroy();
+            initCreateTankTimer();
         }
     }
 
@@ -156,6 +152,7 @@
         particlesTank.visible = true;
         timerTankParticles = self.time.delayedCall(800, stopTankParticles, [], self);
         timerStopHyperSpeed = self.time.delayedCall(3000, stopHyperSpeed, [], self);
+        initCreateTankTimer();
     }
 
     // Hace el efecto de la nave llegando
@@ -215,6 +212,21 @@
         return emitter;
     }
 
+    // Crea el tanque y sus particulas
+    function createTank() {
+        speedtankY = -50;
+        speedtank = self.physics.add.image(Phaser.Math.Between(0, 799), 60, 'speedtank');
+        speedtank.setScale(0.1);
+
+        particlesTank = createTankParticleSystem(nave, self.add.particles('violet'));
+
+        self.physics.add.collider(nave, speedtank, function (nave, speedtank) {
+            tankCollision();
+        });
+
+        timerCreateTankInitiated = false;
+    }
+
     function stopTankParticles() {
         particlesTank.visible = false;
     }
@@ -222,6 +234,13 @@
     function stopHyperSpeed() {
         superSpeedActivated = false;
         emitter.setLifespan(60);
+    }
+
+    function initCreateTankTimer() {
+        if (!timerCreateTankInitiated) {
+            timerCreateTankInitiated = true;
+            timerCreateTank = self.time.delayedCall(Phaser.Math.Between(4000, 30000), createTank, [], self);
+        }
     }
     </script>
 
