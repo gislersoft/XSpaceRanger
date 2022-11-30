@@ -43,14 +43,23 @@
     var naveEscalaFinal = 0.2;
     var naveVelocidadEscalado = 0.01;
     var naveEscala = naveEscalaInicial;
+    var superSpeed = 40;
+    var superSpeedActivated = false;
 
-    var emitter;
+    var engineFire;
 
     // Teclado
     var cursors;
 
     var speedtank;
     var speedtankY = -50;
+
+    var turboSFX;
+
+    var particlesTank;
+    var timerTankParticles;
+    var timerStopHyperSpeed;
+    var self;
 
     function preload ()
     {
@@ -59,16 +68,19 @@
         // Loading images
         this.load.image('sky', 'assets/img/space3.png');
         this.load.image('red', 'assets/img/red.png');
+        this.load.image('violet', 'assets/img/violet.png');
         this.load.image('pelota','assets/img/pelota.png');
         this.load.image('nave','assets/img/spaceship.png');
         this.load.image('speedtank','assets/img/speedtank.png');
 
         // Loading sound
         this.load.audio('music', 'assets/music/backgroundmusic.mp3');
+        this.load.audio('turboSFX', 'assets/sfx/turboRemastered.mp3');
     }
 
     function create ()
     {
+        self = this;
         cursors = this.input.keyboard.createCursorKeys();
 
         if (!playing && !this.load.isLoading()) {
@@ -77,6 +89,8 @@
             music.loop = true;
             // music.play();
         }
+
+        turboSFX = this.sound.add('turboSFX');
 
         backgroundTop = this.add.image(400, backgroundY - 600, 'sky');
         background = this.add.image(400, backgroundY, 'sky');
@@ -87,26 +101,24 @@
 
         this.add.text(10, 10, 'SCORE:', { fontFamily: 'SpaceAge' });
 
-       
-        var particles = this.add.particles('red');
-        emitter = particles.createEmitter({
-            speed: 10,
-            accelerationY: 20000,
-            lifespan: 60,
-            scale: { start: 1, end: 0 },
-            blendMode: 'ADD'
-        });
-        emitter.startFollow(nave);
-        emitter.followOffset.set(0, 50);
-        emitter.setScale(0.5);
-        emitter.visible = false;
+        engineFire = createParticlesBooster();
 
-        speedtank = this.add.image(400, 60, 'speedtank');
+        speedtank = this.physics.add.image(400, 60, 'speedtank');
         speedtank.setScale(0.1);
+
+        particlesTank = createTankParticleSystem(nave, this.add.particles('violet'));
+
+        this.physics.add.collider(nave, speedtank, function (nave, speedtank) {
+            tankCollision();
+        });
+
     }
 
     function updateScene ()
     {
+        if (superSpeedActivated) {
+            speed = superSpeed;
+        }
         doScrolling();
         doSpaceShipScaleEffect();
 
@@ -136,12 +148,22 @@
         }
     }
 
+    function tankCollision() {
+        speedtank.destroy();
+        superSpeedActivated = true;
+        engineFire.setLifespan(600);
+        // turboSFX.play();
+        particlesTank.visible = true;
+        timerTankParticles = self.time.delayedCall(800, stopTankParticles, [], self);
+        timerStopHyperSpeed = self.time.delayedCall(3000, stopHyperSpeed, [], self);
+    }
+
     // Hace el efecto de la nave llegando
     function doSpaceShipScaleEffect() {
         naveEscala = naveEscala - naveVelocidadEscalado;
         if (naveEscala < naveEscalaFinal) {
             naveEscala = naveEscalaFinal;
-            emitter.visible = true;
+            engineFire.visible = true;
             speed = 3;
         }
         nave.setScale(naveEscala);
@@ -160,6 +182,46 @@
 
         backgroundTop.setPosition(400, backgroundY - 600);
         background.setPosition(400, backgroundY);
+    }
+
+    // Crea el sistema de particulas cuando colisiona con el tanque
+    function createTankParticleSystem(objectToFollow, particles) {
+        var emitter;
+        emitter = particles.createEmitter({
+            speed: 20,
+            lifespan: 30,
+            scale: { start: 1, end: 5 },
+            blendMode: 'ADD'
+        });
+        emitter.startFollow(objectToFollow);
+        emitter.setScale(2.0);
+        emitter.visible = false;
+        return emitter;
+    }
+
+    function createParticlesBooster() {
+        var particles = self.add.particles('red');
+        emitter = particles.createEmitter({
+            speed: 10,
+            accelerationY: 20000,
+            lifespan: 60,
+            scale: { start: 1, end: 0 },
+            blendMode: 'ADD'
+        });
+        emitter.startFollow(nave);
+        emitter.followOffset.set(0, 50);
+        emitter.setScale(0.5);
+        emitter.visible = false;
+        return emitter;
+    }
+
+    function stopTankParticles() {
+        particlesTank.visible = false;
+    }
+
+    function stopHyperSpeed() {
+        superSpeedActivated = false;
+        emitter.setLifespan(60);
     }
     </script>
 
