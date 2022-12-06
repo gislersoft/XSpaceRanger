@@ -8,65 +8,14 @@
             src: url('./assets/fonts/spaceage.ttf');
         }
     </style>
+    <script src="./assets/src/sprites/enemyBug.js"></script>
+    <script src="./assets/src/sprites/enemyBugArcadeGroup.js"></script>
+    <script src="./assets/src/sprites/bullet.js"></script>
+    <script src="./assets/src/sprites/bulletArcadeGroup.js"></script>
+    <script src="./assets/src/tank.js"></script>
 </head>
 <body>
     <script>
-    class Bullet extends Phaser.Physics.Arcade.Sprite
-    {
-        constructor (scene, x, y)
-        {
-            super(scene, x, y, 'laser');
-        }
-
-        fire (x, y)
-        {
-            this.body.reset(x, y);
-
-            this.setActive(true);
-            this.setVisible(true);
-
-            this.setVelocityY(-3000);
-            this.setScale(0.2);
-        }
-
-        preUpdate (time, delta)
-        {
-            super.preUpdate(time, delta);
-
-            if (this.y <= -32)
-            {
-                this.setActive(false);
-                this.setVisible(false);
-            }
-        }
-    }
-
-    class Bullets extends Phaser.Physics.Arcade.Group
-    {
-        constructor (scene)
-        {
-            super(scene.physics.world, scene);
-
-            this.createMultiple({
-                frameQuantity: 1,
-                key: 'bullet',
-                active: false,
-                visible: false,
-                classType: Bullet
-            });
-        }
-
-        fireBullet (x, y)
-        {
-            let bullet = this.getFirstDead(false);
-
-            if (bullet)
-            {
-                bullet.fire(x, y);
-            }
-        }
-    }
-
 
     var config = {
         type: Phaser.AUTO,
@@ -108,19 +57,19 @@
     // Teclado
     var cursors;
 
-    var speedtank;
-    var speedtankY = -50;
-
     var turboSFX;
 
-    var particlesTank;
-    var timerTankParticles;
     var timerStopHyperSpeed;
-    var timerCreateTank;
-    var timerCreateTankInitiated = false;
+
     var self;
 
     var bullets;
+
+    // Aliens
+    var alienSpawn = false;
+    var aliens;
+
+    var tank;
 
     function preload ()
     {
@@ -134,6 +83,7 @@
         this.load.image('nave','assets/img/spaceship.png');
         this.load.image('speedtank','assets/img/speedtank.png');
         this.load.image('laser', 'assets/img/laser.png');
+        this.load.image('alienbug', 'assets/img/alienbug.png');
 
         // Loading sound
         this.load.audio('music', 'assets/music/backgroundmusic.mp3');
@@ -161,13 +111,21 @@
         nave.setScale(naveEscala);
         nave.setCollideWorldBounds(true);
 
-        this.add.text(10, 10, 'SCORE:', { fontFamily: 'SpaceAge' });
-
         engineFire = createParticlesBooster();
 
-        createTank();
+        tank = new Tank(this);
+        tank.createTank(nave, ()=>{
+            superSpeedActivated = true;
+            engineFire.setLifespan(600);
+            turboSFX.play();
+            timerStopHyperSpeed = self.time.delayedCall(3000, stopHyperSpeed, [], self);
+        });
 
-        this.bullets = new Bullets(this);
+        this.bullets = new BulletArcadeGroup(this);
+
+        this.aliens = new EnemyBugArcadeGroup(this);
+
+        this.add.text(10, 10, 'SCORE:', { fontFamily: 'SpaceAge' });
 
     }
 
@@ -201,24 +159,17 @@
             this.bullets.fireBullet(nave.x, nave.y - 60);
         }
 
-        speedtankY = speedtankY + speed;
-        speedtank.rotation += 0.01;
-        speedtank.setPosition(speedtank.x, speedtankY);
-        if (speedtankY > 620) {
-            speedtank.destroy();
-            initCreateTankTimer();
-        }
+        tank.updateTank();
+    
+        updateAlien();
+        
     }
 
-    function tankCollision() {
-        speedtank.destroy();
-        superSpeedActivated = true;
-        engineFire.setLifespan(600);
-        // turboSFX.play();
-        particlesTank.visible = true;
-        timerTankParticles = self.time.delayedCall(800, stopTankParticles, [], self);
-        timerStopHyperSpeed = self.time.delayedCall(3000, stopHyperSpeed, [], self);
-        initCreateTankTimer();
+    function updateAlien() {
+        if (!alienSpawn) {
+            alienSpawn = true;
+            self.aliens.spawnEnemy(Phaser.Math.Between(0, 799), -40);
+        }
     }
 
     // Hace el efecto de la nave llegando
@@ -247,21 +198,6 @@
         background.setPosition(400, backgroundY);
     }
 
-    // Crea el sistema de particulas cuando colisiona con el tanque
-    function createTankParticleSystem(objectToFollow, particles) {
-        var emitter;
-        emitter = particles.createEmitter({
-            speed: 20,
-            lifespan: 30,
-            scale: { start: 1, end: 5 },
-            blendMode: 'ADD'
-        });
-        emitter.startFollow(objectToFollow);
-        emitter.setScale(2.0);
-        emitter.visible = false;
-        return emitter;
-    }
-
     function createParticlesBooster() {
         var particles = self.add.particles('red');
         emitter = particles.createEmitter({
@@ -278,36 +214,11 @@
         return emitter;
     }
 
-    // Crea el tanque y sus particulas
-    function createTank() {
-        speedtankY = -50;
-        speedtank = self.physics.add.image(Phaser.Math.Between(0, 799), 60, 'speedtank');
-        speedtank.setScale(0.1);
-
-        particlesTank = createTankParticleSystem(nave, self.add.particles('violet'));
-
-        self.physics.add.collider(nave, speedtank, function (nave, speedtank) {
-            tankCollision();
-        });
-
-        timerCreateTankInitiated = false;
-    }
-
-    function stopTankParticles() {
-        particlesTank.visible = false;
-    }
-
     function stopHyperSpeed() {
         superSpeedActivated = false;
         emitter.setLifespan(60);
     }
 
-    function initCreateTankTimer() {
-        if (!timerCreateTankInitiated) {
-            timerCreateTankInitiated = true;
-            timerCreateTank = self.time.delayedCall(Phaser.Math.Between(4000, 30000), createTank, [], self);
-        }
-    }
     </script>
 
 </body>
