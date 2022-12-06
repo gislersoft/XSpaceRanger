@@ -113,13 +113,14 @@
 
         engineFire = createParticlesBooster();
 
-        tank = new Tank(this);
-        tank.createTank(nave, ()=>{
+        tank = new Tank(this, nave, ()=>{
             superSpeedActivated = true;
             engineFire.setLifespan(600);
             turboSFX.play();
             timerStopHyperSpeed = self.time.delayedCall(3000, stopHyperSpeed, [], self);
         });
+
+        tank.createTank();
 
         this.bullets = new BulletArcadeGroup(this);
 
