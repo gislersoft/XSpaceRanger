@@ -51,6 +51,7 @@
     var naveEscala = naveEscalaInicial;
     var superSpeed = 40;
     var superSpeedActivated = false;
+    var naveEscalando = true;
 
     var engineFire;
 
@@ -169,25 +170,27 @@
     }
 
     function updateAlien() {
-        if (!alienSpawn) {
+        if (!alienSpawn && !naveEscalando) {
             var aliensMaxSpawn = 3;
             aliensSpawCount++;
             // console.log(aliensSpawCount);
             self.aliens.spawnEnemy(Phaser.Math.Between(0, 799), -40, nave);
             if (aliensSpawCount >= aliensMaxSpawn) {
                 alienSpawn = true;
-                // console.log("No mas bichos");
             }
         }
     }
 
     // Hace el efecto de la nave llegando
     function doSpaceShipScaleEffect() {
-        naveEscala = naveEscala - naveVelocidadEscalado;
-        if (naveEscala < naveEscalaFinal) {
-            naveEscala = naveEscalaFinal;
-            engineFire.visible = true;
-            speed = 3;
+        if (naveEscalando) {
+            naveEscala = naveEscala - naveVelocidadEscalado;
+            if (naveEscala < naveEscalaFinal) {
+                naveEscala = naveEscalaFinal;
+                engineFire.visible = true;
+                speed = 3;
+                naveEscalando = false;
+            }
         }
         nave.setScale(naveEscala);
 

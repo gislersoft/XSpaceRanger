@@ -37,8 +37,8 @@ class EnemyBug extends Phaser.Physics.Arcade.Sprite {
             nave.tint = 0xff0000;
             this.hitTimer = this.scene.time.delayedCall(100, () => {
                 nave.tint = this.originalSpaceShipTint;
-                // this.destroy();
-            }, [], self);
+                this.destroy();
+            }, [], this.scene);
         });
     }
 

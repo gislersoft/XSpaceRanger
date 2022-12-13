@@ -4,7 +4,7 @@ class EnemyBugArcadeGroup extends Phaser.Physics.Arcade.Group {
         super(scene.physics.world, scene);
 
         this.createMultiple({
-            frameQuantity: 1,
+            frameQuantity: 3,
             key: 'alien',
             active: false,
             visible: false,
