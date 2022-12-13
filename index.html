@@ -24,7 +24,7 @@
         physics: {
             default: 'arcade',
             arcade: {
-                gravity: { y: 200 }
+                gravity: { y: 0 }
             }
         },
         scene: {
@@ -68,6 +68,8 @@
     // Aliens
     var alienSpawn = false;
     var aliens;
+    var aliensMaxSpawn = 3;
+    var aliensSpawCount = 0;
 
     var tank;
 
@@ -168,8 +170,14 @@
 
     function updateAlien() {
         if (!alienSpawn) {
-            alienSpawn = true;
-            self.aliens.spawnEnemy(Phaser.Math.Between(0, 799), -40);
+            var aliensMaxSpawn = 3;
+            aliensSpawCount++;
+            // console.log(aliensSpawCount);
+            self.aliens.spawnEnemy(Phaser.Math.Between(0, 799), -40, nave);
+            if (aliensSpawCount >= aliensMaxSpawn) {
+                alienSpawn = true;
+                // console.log("No mas bichos");
+            }
         }
     }
 

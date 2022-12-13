@@ -12,13 +12,13 @@ class EnemyBugArcadeGroup extends Phaser.Physics.Arcade.Group {
         });
     }
 
-    spawnEnemy (x, y)
+    spawnEnemy (x, y, nave)
     {
         let bug = this.getFirstDead(false);
 
         if (bug)
         {
-            bug.spawn(x, y);
+            bug.spawn(x, y, nave);
         }
     }
 }
