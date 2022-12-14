@@ -183,14 +183,12 @@
                 }
             } else {
                 if (self.aliens && self.aliens.children) {
-
                     const aliensFiltrados = self.aliens.children.entries.filter(function (alien) {
                         return (alien.active === true);
                     });
 
                     aliensActivos = aliensFiltrados.length;
 
-                    console.log("aliensActivos:"+aliensActivos);
                     if (aliensActivos <= 0) {
                         alienSpawn = false;
                         aliensSpawCount = 0;
