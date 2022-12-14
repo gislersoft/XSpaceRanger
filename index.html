@@ -71,6 +71,7 @@
     var aliens;
     var aliensMaxSpawn = 3;
     var aliensSpawCount = 0;
+    let aliensActivos = 0;
 
     var tank;
 
@@ -123,7 +124,7 @@
             timerStopHyperSpeed = self.time.delayedCall(3000, stopHyperSpeed, [], self);
         });
 
-        tank.createTank();
+        // tank.createTank();
 
         this.bullets = new BulletArcadeGroup(this);
 
@@ -160,23 +161,41 @@
         }
 
         if (cursors.space.isDown) {
-            this.bullets.fireBullet(nave.x, nave.y - 60);
+            this.bullets.fireBullet(nave.x, nave.y - 60, this.aliens);
         }
 
-        tank.updateTank();
-    
+        // tank.updateTank();
+
         updateAlien();
-        
+
     }
 
     function updateAlien() {
-        if (!alienSpawn && !naveEscalando) {
-            var aliensMaxSpawn = 3;
-            aliensSpawCount++;
-            // console.log(aliensSpawCount);
-            self.aliens.spawnEnemy(Phaser.Math.Between(0, 799), -40, nave);
-            if (aliensSpawCount >= aliensMaxSpawn) {
-                alienSpawn = true;
+        if (!naveEscalando) {
+            if (!alienSpawn) {
+                aliensSpawCount++;
+                setTimeout(()=> {
+                    self.aliens.spawnEnemy(Phaser.Math.Between(0, 799), 0, nave);
+                }, 1000);
+
+                if (aliensSpawCount >= aliensMaxSpawn) {
+                    alienSpawn = true;
+                }
+            } else {
+                if (self.aliens && self.aliens.children) {
+
+                    const aliensFiltrados = self.aliens.children.entries.filter(function (alien) {
+                        return (alien.active === true);
+                    });
+
+                    aliensActivos = aliensFiltrados.length;
+
+                    console.log("aliensActivos:"+aliensActivos);
+                    if (aliensActivos <= 0) {
+                        alienSpawn = false;
+                        aliensSpawCount = 0;
+                    }
+                }
             }
         }
     }
@@ -188,9 +207,11 @@
             if (naveEscala < naveEscalaFinal) {
                 naveEscala = naveEscalaFinal;
                 engineFire.visible = true;
-                speed = 3;
                 naveEscalando = false;
+                speed = 3;
             }
+        } else {
+            speed = 3;
         }
         nave.setScale(naveEscala);
 
@@ -198,7 +219,7 @@
     }
 
     // Scrolls the background
-    function doScrolling() 
+    function doScrolling()
     {
         backgroundY = backgroundY + speed;
 

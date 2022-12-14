@@ -13,13 +13,14 @@ class BulletArcadeGroup extends Phaser.Physics.Arcade.Group
         });
     }
 
-    fireBullet (x, y)
+    fireBullet (x, y, aliensArcadeGroup)
     {
         let bullet = this.getFirstDead(false);
 
         if (bullet)
         {
-            bullet.fire(x, y);
+            bullet.fire(x, y, aliensArcadeGroup);
+            this.scene.physics.world.enable(bullet);
         }
     }
 }
