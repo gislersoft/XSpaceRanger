@@ -75,6 +75,42 @@
 
     var tank;
 
+    let score = 0;
+    let scoreText;
+    let ligthYearsText;
+    let gameOverText;
+
+    let ligthYears = 10000;
+
+
+    let vidaNave = 400;
+
+    let barraDeVida;
+
+    let vidas = 3;
+    let spriteVidas;
+
+    let xPosInicialNave = 400;
+    let yPosInicialNave = 500;
+
+    let explosionParticulas;
+
+    let planeta;
+    let posYPlaneta = - 260;
+    let limiteYPlaneta = 200;
+    let ultimaPosicionConocida;
+    let velocidadNaveAlCentro = 0;
+    let velocidadAterrizando;
+    let ultimaEscala;
+
+    let levelCompleteText;
+
+    let laserSFX;
+    let music;
+    let musicLevelComplete;
+
+    let stopMusic = false;
+
     function preload ()
     {
         this.load.setBaseURL('http://localhost/juego/');
@@ -88,10 +124,13 @@
         this.load.image('speedtank','assets/img/speedtank.png');
         this.load.image('laser', 'assets/img/laser.png');
         this.load.image('alienbug', 'assets/img/alienbug.png');
+        this.load.image('planet', 'assets/img/planet.png');
 
         // Loading sound
         this.load.audio('music', 'assets/music/backgroundmusic.mp3');
+        this.load.audio('levelComplete', 'assets/music/levelcomplete.mp3');
         this.load.audio('turboSFX', 'assets/sfx/turboRemastered.mp3');
+        this.load.audio('laserSFX', 'assets/sfx/laser.mp3');
     }
 
     function create ()
@@ -99,19 +138,22 @@
         self = this;
         cursors = this.input.keyboard.createCursorKeys();
 
-        if (!playing && !this.load.isLoading()) {
-            playing = true
-            var music = this.sound.add('music') // this works
-            music.loop = true;
-            // music.play();
-        }
+        music = this.sound.add('music');
+        music.play();
+
+        musicLevelComplete = this.sound.add('levelComplete');
 
         turboSFX = this.sound.add('turboSFX');
+        laserSFX = this.sound.add('laserSFX');
 
         backgroundTop = this.add.image(400, backgroundY - 600, 'sky');
         background = this.add.image(400, backgroundY, 'sky');
 
-        nave = this.physics.add.image(400,500,'nave');
+        planeta = self.add.image(400,posYPlaneta,'planet');
+        planeta.setScale(0.8);
+        planeta.setVisible(false);
+
+        nave = this.physics.add.image(xPosInicialNave,yPosInicialNave,'nave');
         nave.setScale(naveEscala);
         nave.setCollideWorldBounds(true);
 
@@ -124,24 +166,131 @@
             timerStopHyperSpeed = self.time.delayedCall(3000, stopHyperSpeed, [], self);
         });
 
-        // tank.createTank();
+        tank.createTank();
 
         this.bullets = new BulletArcadeGroup(this);
 
         this.aliens = new EnemyBugArcadeGroup(this);
 
-        this.add.text(10, 10, 'SCORE:', { fontFamily: 'SpaceAge' });
+        scoreText = this.add.text(10, 10, 'SCORE: ', { fontFamily: 'SpaceAge' });
 
+        ligthYearsText =  this.add.text(10, 30, 'ETA: ', { font:"16px SpaceAge", fill: "#00eeff" });
+
+        gameOverText = this.add.text(160, 250, 'GAME OVER', {font:"64px SpaceAge", fill: "#eeeeee", align: 'center'});
+        gameOverText.setVisible(false);
+
+        levelCompleteText = this.add.text(160, 250, 'LEVEL\nCOMPLETE',
+            {font:"64px SpaceAge", fill: "#eeeeee", align: 'center'});
+
+        let bordeBarra = this.add.rectangle(780, 300, 10, 400);
+        bordeBarra.setStrokeStyle(2, 0x00ffff, 1);
+
+        barraDeVida = this.add.rectangle(780, 500+(vidaNave/2)-(vidaNave), 10, vidaNave, 0x00ff00, 0.5);
+        // Nota: Se necesita para que el browser recargue las fuentes.
+        setTimeout(()=>{
+            scoreAdd(0);
+        },200);
+
+        spriteVidas = [];
+        spriteVidas.push(createVida(765,40));
+        spriteVidas.push(createVida(725,40));
+        spriteVidas.push(createVida(685,40));
+
+        explosionParticulas = this.add.particles('red').createEmitter({
+            x: 400,
+            y: 300,
+            speed: { min: -800, max: 800 },
+            angle: { min: 0, max: 360 },
+            scale: { start: 0.3, end: 0 },
+            blendMode: 'SCREEN',
+            // active: false,
+            lifespan: 300,
+            gravityY: 800
+        });
+
+        explosionParticulas.explode(-100,100,1);
+
+
+    }
+
+    function createVida(x, y) {
+        const naveVida = self.add.image(x,y,'nave');
+        naveVida.setScale(0.1);
+        naveVida.setVisible(TextTrackCueList);
+        return naveVida;
+    }
+
+    function cambiarColorBarraVida() {
+        if (vidaNave > 200) {
+            barraDeVida.setFillStyle(0x00ff00, 0.5);
+        } else if (vidaNave > 20 && vidaNave <= 200) {
+            barraDeVida.setFillStyle(0xffff00, 0.5);
+        } else if (vidaNave <= 20) {
+            barraDeVida.setFillStyle(0xff0000, 0.5);
+        }
+        // TODO: arreglar bug de la vida
+        barraDeVida.setSize( 10, vidaNave);
+        barraDeVida.setY(500+(vidaNave/2)-(vidaNave));
+    }
+
+    // TODO: Refactor esto se puede mas facil
+    function mostrarCantidadVidas() {
+        for (let i=0; i < spriteVidas.length; i++){
+            spriteVidas[i].setVisible(false);
+        }
+        for (let i=0; i < vidas; i++){
+            spriteVidas[i].setVisible(true);
+        }
+    }
+
+    function scoreAdd(points) {
+        score = score + points;
+        scoreText.setText('SCORE: '+ score);
     }
 
     function updateScene ()
     {
+        if (!music.isPlaying && !this.load.isLoading() && !stopMusic) {
+            music.play();
+        }
+
+        cambiarColorBarraVida();
+        mostrarCantidadVidas();
+        doSpaceShipScaleEffect();
         if (superSpeedActivated) {
+  
             speed = superSpeed;
+
         }
         doScrolling();
-        doSpaceShipScaleEffect();
 
+        if (!naveEscalando) {
+            leerEntradaDelJugador();
+        }
+
+        if (cursors.space.isDown) {
+            if (!laserSFX.isPlaying && !this.load.isLoading()) {
+                laserSFX.play();
+            }
+            this.bullets.fireBullet(nave.x, nave.y - 60, this.aliens, function() {
+                // Bicho destruido por laser
+                scoreAdd(25);
+            });
+        }
+
+        tank.updateTank();
+
+        updateAlien();
+
+        ligthYears = ligthYears - speed;
+        if (ligthYears<0) {
+            ligthYears=0;
+        }
+        ligthYearsText.setText('ETA: ' + ligthYears);
+
+    }
+
+    function leerEntradaDelJugador() {
         if (cursors.left.isDown)
         {
             nave.setVelocityX(-300);
@@ -159,15 +308,6 @@
         {
             nave.setVelocityY(300);
         }
-
-        if (cursors.space.isDown) {
-            this.bullets.fireBullet(nave.x, nave.y - 60, this.aliens);
-        }
-
-        // tank.updateTank();
-
-        updateAlien();
-
     }
 
     function updateAlien() {
@@ -175,7 +315,46 @@
             if (!alienSpawn) {
                 aliensSpawCount++;
                 setTimeout(()=> {
-                    self.aliens.spawnEnemy(Phaser.Math.Between(0, 799), 0, nave);
+                    self.aliens.spawnEnemy(Phaser.Math.Between(0, 799), 0, nave, function(){
+                        // Bicho destruido por choque con la nave
+                        vidaNave = vidaNave - 100;
+                        if (vidaNave <= 0) {
+                            //explosionParticulas.setPosition(nave.x, nave.y);
+                            // explosionParticulas.setVisible(true);
+                            explosionParticulas.explode(200, nave.x, nave.y);
+                            nave.setVisible(false);
+                            engineFire.visible = false;
+                            nave.body.enable = false;
+                            setTimeout(function() {
+                                
+                                vidas = vidas - 1;
+                                if (vidas < 0) {
+                                    gameOverText.setVisible(true);
+
+                                    setTimeout(function() {
+                                        gameOverText.setVisible(false);
+                                        nave.setVisible(true);
+                                        nave.setPosition(xPosInicialNave, yPosInicialNave);
+                                        vidaNave = 400;
+                                        naveEscalando = true;
+                                        naveEscala = naveEscalaInicial;
+                                        nave.body.enable = true;
+                                        vidas = 3;
+
+                                        score = 0;
+                                    }, 5000);
+                                } else {
+                                    nave.setVisible(true);
+                                    nave.setPosition(xPosInicialNave, yPosInicialNave);
+                                    vidaNave = 400;
+                                    naveEscalando = true;
+                                    naveEscala = naveEscalaInicial;
+                                    nave.body.enable = true;
+                                }
+                            },500);
+                        }
+                        scoreAdd(5);
+                    });
                 }, 1000);
 
                 if (aliensSpawCount >= aliensMaxSpawn) {
@@ -195,6 +374,13 @@
                     }
                 }
             }
+        } else {
+            self.aliens.children.entries.forEach((alien)=>{
+                alien.setActive(false);
+                alien.setVisible(false);
+                alien.setVelocityY(0);
+                alien.body.enable = false;
+            });
         }
     }
 
@@ -219,6 +405,58 @@
     // Scrolls the background
     function doScrolling()
     {
+
+        if (ligthYears === 0) {
+            planeta.setVisible(true);
+            if (posYPlaneta > limiteYPlaneta) {
+                levelCompleteText.setVisible(true);
+                levelCompleteText.setText('LEVEL\nCOMPLETE');
+
+                if (!musicLevelComplete.isPlaying && !self.load.isLoading()) {
+                    stopMusic = true;
+                    music.stop();
+                    musicLevelComplete.play();
+                }
+
+                nave.body.enable = false;
+                speed = 0;
+                velocidadNaveAlCentro = velocidadNaveAlCentro + 0.0001;
+                if (velocidadNaveAlCentro>1){
+                    velocidadNaveAlCentro = 1;
+                }
+                const newPos = ultimaPosicionConocida.lerp(
+                    new Phaser.Math.Vector2(xPosInicialNave,300),
+                    velocidadNaveAlCentro
+                );
+                
+                nave.setPosition(newPos.x,newPos.y);
+                ultimaEscala = ultimaEscala - 0.001;
+                if (ultimaEscala < 0.10) {
+                    engineFire.setVisible(false);
+                }
+                if (ultimaEscala < 0.01){
+                    ultimaEscala = 0.01;
+                    nave.setVisible(false);
+                }
+               
+                nave.setScale(ultimaEscala);
+                
+
+                // let vectorPos = ultimaPosicionConocida.lerp(new Phaser.Math.Vector2(400,300), velocidadNaveAlCentro);
+                // nave.setPosition(vectorPos);
+            } else {
+                ultimaPosicionConocida = new Phaser.Math.Vector2(nave.body.position.x,nave.body.position.y);
+                ultimaEscala = naveEscalaFinal;
+            }
+            
+
+            posYPlaneta = posYPlaneta + speed;
+
+            planeta.setPosition(400,posYPlaneta + speed);
+        } else {
+            levelCompleteText.setVisible(false);
+        }
+
         backgroundY = backgroundY + speed;
 
         if (backgroundY > 900) {
@@ -227,6 +465,7 @@
 
         backgroundTop.setPosition(400, backgroundY - 600);
         background.setPosition(400, backgroundY);
+
     }
 
     function createParticlesBooster() {

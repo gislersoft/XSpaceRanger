@@ -16,7 +16,7 @@ class EnemyBug extends Phaser.Physics.Arcade.Sprite {
         this.bugSpeed = Phaser.Math.Between(this.bugSpeedMin, this.bugSpeedLimit) / 10000;
     }
 
-    spawn (x, y, nave)
+    spawn (x, y, nave, collisionCallback)
     {
         this.originalSpaceShipTint = this.tint;
 
@@ -24,6 +24,7 @@ class EnemyBug extends Phaser.Physics.Arcade.Sprite {
 
         this.setActive(true);
         this.setVisible(true);
+        this.body.enable = true;
 
         this.calculateVelocity();
 
@@ -31,12 +32,14 @@ class EnemyBug extends Phaser.Physics.Arcade.Sprite {
 
         this.setScale(0.2);
 
-        this.scene.physics.add.collider(this,  nave, ()=>{
+        this.scene.physics.add.collider(this,  nave, (self, _)=>{
             nave.tint = 0xff0000;
+            self.setVisible(false);
+            self.setActive(false);
+            self.body.enable = false;
             this.hitTimer = this.scene.time.delayedCall(50, () => {
                 nave.tint = this.originalSpaceShipTint;
-                this.setVisible(false);
-                this.setActive(false);
+                collisionCallback();
             }, [], this.scene);
         });
     }
